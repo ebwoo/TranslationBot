@@ -27,7 +27,7 @@ FRENCH_STOPWORDS = {
     # Pronouns
     "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles",
     "me", "m", "te", "t", "se", "s", "le", "la", "les", "lui",
-    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
+    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en", "rien"
 
     # Articles / determiners
     "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
