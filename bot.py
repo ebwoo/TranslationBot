@@ -29,7 +29,7 @@ FRENCH_STOPWORDS = {
     # Pronouns
     "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
     "me", "m", "te", "t", "se", "s", "le", "la", "les", "lui",
-    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en", "t'as", "kiffer", "avoue"
+    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en", "t'as", "kiffer", "avoue",
 
     # Articles / determiners
     "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
@@ -177,7 +177,7 @@ async def on_message(message: discord.Message):
 
     if (
         looks_like_french(text)
-        and (lang in WATCHED_LANGUAGES and confidence > CONFIDENCE_THRESHOLD)
+        or (lang in WATCHED_LANGUAGES and confidence > CONFIDENCE_THRESHOLD)
     ):
         lang = "fr"  # force French: either the heuristic caught it, or langdetect did
         try:
