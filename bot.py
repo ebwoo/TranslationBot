@@ -27,7 +27,7 @@ FRENCH_STOPWORDS = {
     # Pronouns
     "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles",
     "me", "m", "te", "t", "se", "s", "le", "la", "les", "lui",
-    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en", "va", "rien", "dire",
+    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
 
     # Articles / determiners
     "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
@@ -160,7 +160,7 @@ async def on_message(message: discord.Message):
         await bot.process_commands(message)
         return
 
-    if len(text) < 10:
+    if len(text) < 5:
         await bot.process_commands(message)
         return
 
