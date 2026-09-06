@@ -130,6 +130,7 @@ def translate_text(text, source_lang):
         result = deepl_translator.translate_text(
             text, source_lang=source_lang.upper(), target_lang="EN-US"
         )
+        
         return result.text
     except Exception as e:
         print(f"DeepL failed, falling back to MyMemory: {e}")
@@ -169,6 +170,8 @@ async def on_message(message: discord.Message):
         top = results[0]          # highest-probability guess
         lang = top.lang
         confidence = top.prob
+        print(f"DEBUG: '{text}' -> lang={lang}, confidence={confidence:.2f}, "
+              f"looks_like_french={looks_like_french(text)}")
     except LangDetectException:
         await bot.process_commands(message)
         return
