@@ -93,7 +93,7 @@ FRENCH_STOPWORDS = {
     "ceci", "cela", "ça", "ce", "cet", "cette", "ces",
 
     # Time / quantity words
-    "fois", "jour", "jours", "an", "ans", "année", "années",
+    "fois", "jour", "jours", "ans", "année", "années",
     "heure", "heures", "moment", "temps",
 
 }
