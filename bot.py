@@ -27,9 +27,10 @@ CONFIDENCE_THRESHOLD = 0.85
 
 FRENCH_STOPWORDS = {
     # Pronouns
-    "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
+    "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles",
     "me", "m", "te", "t", "se", "s", "le", "la", "les", "lui",
-    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en", "t'as", "kiffer", "avoue",
+    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
+    "t'as", "kiffer", "avoue",
 
     # Articles / determiners
     "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
@@ -41,7 +42,7 @@ FRENCH_STOPWORDS = {
 
     # Common verbs
     "être", "est", "es", "suis", "sommes", "êtes", "sont",
-    "avoir", "ai", "as", "avons", "avez", "ont",
+    "avoir", "ai", "as", "a", "avons", "avez", "ont",
     "faire", "fais", "fait", "faisons", "faites", "font",
     "aller", "vais", "vas", "va", "allons", "allez", "vont",
     "venir", "viens", "vient", "venons", "venez", "viennent",
@@ -60,12 +61,12 @@ FRENCH_STOPWORDS = {
     "aucun", "aucune", "ni", "sans",
 
     # Conjunctions
-    "et", "ou", "mais", "donc", "car", "ni", "que", "qu",
+    "et", "ou", "mais", "donc", "or", "car", "ni", "que", "qu",
     "si", "comme", "lorsque", "lorsqu", "puisque", "puisqu",
     "parce", "pourtant", "cependant", "ainsi", "alors",
 
     # Prepositions
-    "à", "de", "d", "en", "dans", "sur", "sous", "avec",
+    "à", "a", "de", "d", "en", "dans", "sur", "sous", "avec",
     "sans", "pour", "par", "chez", "entre", "vers", "contre",
     "avant", "après", "depuis", "pendant", "durant", "selon",
     "devant", "derrière", "près", "loin", "parmi", "autour",
@@ -100,22 +101,32 @@ FRENCH_STOPWORDS = {
     "cas", "place", "monde", "gens",
 }
 
+# Words that overlap with common standalone English words — on their own,
+# a single match isn't strong evidence of French (e.g. "a", "on" both occur
+# constantly in ordinary English sentences).
+AMBIGUOUS_WORDS = {"a", "on", "y", "en"}
+
+STRONG_FRENCH_WORDS = FRENCH_STOPWORDS - AMBIGUOUS_WORDS
+
 ACCENTED_CHARS = set("àâäéèêëîïôöùûüçœæ")
 
 
 def looks_like_french(text: str) -> bool:
-    """Sanity check independent of langdetect: require either an accented
-    character, or at least two common French words, to appear in the text.
-    Requiring two matches (rather than one) avoids false positives from
-    short words that are also valid English (e.g. 'a', 'on', 'y')."""
+    """Sanity check independent of langdetect: an accented character, OR at
+    least one unambiguous French word, OR at least two *distinct* ambiguous
+    words together. Counting distinct words (not raw occurrences) stops a
+    single common English word like "on" repeated twice from counting as
+    two pieces of evidence."""
     lowered = text.lower()
 
     if any(char in ACCENTED_CHARS for char in lowered):
         return True
 
-    words = re.findall(r"[a-zà-ÿ']+", lowered)
-    matches = sum(1 for word in words if word in FRENCH_STOPWORDS)
-    return matches >= 2
+    words = set(re.findall(r"[a-zà-ÿ']+", lowered))
+    strong_matches = words & STRONG_FRENCH_WORDS
+    ambiguous_matches = words & AMBIGUOUS_WORDS
+
+    return len(strong_matches) >= 1 or len(ambiguous_matches) >= 2
 
 # Set up DeepL translator client once, reused for every message
 deepl_translator = deepl.Translator(DEEPL_KEY)
@@ -132,14 +143,14 @@ def translate_text(text, source_lang):
         )
         return result.text
     except Exception as e:
-        print(f"DeepL failed, falling back to MyMemory: {e}", flush=True)
+        print(f"DeepL failed, falling back to MyMemory: {e}")
         mm_source = MYMEMORY_LANG_MAP.get(source_lang, source_lang)
         return MyMemoryTranslator(source=mm_source, target="en-GB").translate(text)
 
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}", flush=True)
+    print(f"Logged in as {bot.user}")
 
 
 @bot.event
@@ -170,20 +181,17 @@ async def on_message(message: discord.Message):
         lang = top.lang
         confidence = top.prob
         print(f"DEBUG: '{text}' -> lang={lang}, confidence={confidence:.2f}, "
-              f"looks_like_french={looks_like_french(text)}", flush=True)
+              f"looks_like_french={looks_like_french(text)}")
     except LangDetectException:
         await bot.process_commands(message)
         return
 
-    if (
-        looks_like_french(text)
-        or (lang in WATCHED_LANGUAGES and confidence > CONFIDENCE_THRESHOLD)
-    ):
-        lang = "fr"  # force French: either the heuristic caught it, or langdetect did
+    if looks_like_french(text):
+        lang = "fr"  # heuristic-confirmed; langdetect's label is unreliable on short text
         try:
             translated = translate_text(text, lang)
         except Exception as e:
-            print(f"Translation failed entirely: {e}", flush=True)
+            print(f"Translation failed entirely: {e}")
             await bot.process_commands(message)
             return
 
