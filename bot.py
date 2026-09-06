@@ -27,8 +27,8 @@ CONFIDENCE_THRESHOLD = 0.85
 
 FRENCH_STOPWORDS = {
     # Pronouns
-    "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles",
-    "me", "m", "te", "t", "se", "s", "le", "la", "les", "lui",
+    "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
+    "m", "te", "t", "se", "s", "le", "la", "les", "lui",
     "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
     "t'as", "kiffer", "avoue",
 
@@ -42,7 +42,7 @@ FRENCH_STOPWORDS = {
 
     # Common verbs
     "être", "est", "es", "suis", "sommes", "êtes", "sont",
-    "avoir", "ai", "as", "a", "avons", "avez", "ont",
+    "avoir", "ai", "avons", "avez", "ont",
     "faire", "fais", "fait", "faisons", "faites", "font",
     "aller", "vais", "vas", "va", "allons", "allez", "vont",
     "venir", "viens", "vient", "venons", "venez", "viennent",
@@ -61,12 +61,12 @@ FRENCH_STOPWORDS = {
     "aucun", "aucune", "ni", "sans",
 
     # Conjunctions
-    "et", "ou", "mais", "donc", "or", "car", "ni", "que", "qu",
+    "et", "ou", "mais", "donc", "car", "ni", "que", "qu",
     "si", "comme", "lorsque", "lorsqu", "puisque", "puisqu",
     "parce", "pourtant", "cependant", "ainsi", "alors",
 
     # Prepositions
-    "à", "a", "de", "d", "en", "dans", "sur", "sous", "avec",
+    "à", "de", "d", "en", "dans", "sur", "sous", "avec",
     "sans", "pour", "par", "chez", "entre", "vers", "contre",
     "avant", "après", "depuis", "pendant", "durant", "selon",
     "devant", "derrière", "près", "loin", "parmi", "autour",
@@ -96,9 +96,6 @@ FRENCH_STOPWORDS = {
     "fois", "jour", "jours", "an", "ans", "année", "années",
     "heure", "heures", "moment", "temps",
 
-    # Common miscellaneous words
-    "chose", "choses", "façon", "manière", "part",
-    "cas", "place", "monde", "gens",
 }
 
 # Words that overlap with common standalone English words — on their own,
