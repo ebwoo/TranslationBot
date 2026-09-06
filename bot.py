@@ -35,7 +35,7 @@ FRENCH_STOPWORDS = {
     # Articles / determiners
     "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
     "au", "aux", "ce", "cet", "cette", "ces", "mon", "ma", "mes",
-    "ton", "ta", "tes", "son", "sa", "ses", "notre", "nos",
+    "ta", "tes", "son", "sa", "ses", "notre", "nos",
     "votre", "vos", "leur", "leurs", "quel", "quelle", "quels",
     "quelles", "quelque", "quelques", "chaque", "tout", "toute",
     "tous", "toutes", "aucun", "aucune",
@@ -101,7 +101,7 @@ FRENCH_STOPWORDS = {
 # Words that overlap with common standalone English words — on their own,
 # a single match isn't strong evidence of French (e.g. "a", "on" both occur
 # constantly in ordinary English sentences).
-AMBIGUOUS_WORDS = {"a", "on", "y", "en"}
+AMBIGUOUS_WORDS = {"y", "en"}
 
 STRONG_FRENCH_WORDS = FRENCH_STOPWORDS - AMBIGUOUS_WORDS
 
