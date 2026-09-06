@@ -23,7 +23,7 @@ TARGET_CHANNEL_ID = 1545938608215556167   # channel where translations get poste
 SOURCE_CHANNEL_IDS = {1518211425116491797, 1518454285023838338, 1518212264501710968, 1518308060261650644, 1545989798093660280, 1518211425116491798}  # channels to watch (optional filter)
 
 # Minimum confidence required before acting on a detected language (0.0 - 1.0)
-CONFIDENCE_THRESHOLD = 0.95
+CONFIDENCE_THRESHOLD = 0.85
 
 FRENCH_STOPWORDS = {
     # Pronouns
@@ -177,7 +177,7 @@ async def on_message(message: discord.Message):
 
     if (
         looks_like_french(text)
-        or (lang in WATCHED_LANGUAGES and confidence > CONFIDENCE_THRESHOLD)
+        and (lang in WATCHED_LANGUAGES and confidence > CONFIDENCE_THRESHOLD)
     ):
         lang = "fr"  # force French: either the heuristic caught it, or langdetect did
         try:
