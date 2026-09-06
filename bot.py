@@ -29,7 +29,7 @@ FRENCH_STOPWORDS = {
     # Pronouns
     "je", "tu", "il", "elle", "on", "nous", "vous", "ils", "elles",
     "me", "m", "te", "t", "se", "s", "le", "la", "les", "lui",
-    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en", "t'as", "kiffer", "avoue"
+    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
 
     # Articles / determiners
     "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
@@ -132,14 +132,14 @@ def translate_text(text, source_lang):
         )
         return result.text
     except Exception as e:
-        print(f"DeepL failed, falling back to MyMemory: {e}", flush=True)
+        print(f"DeepL failed, falling back to MyMemory: {e}")
         mm_source = MYMEMORY_LANG_MAP.get(source_lang, source_lang)
         return MyMemoryTranslator(source=mm_source, target="en-GB").translate(text)
 
 
 @bot.event
 async def on_ready():
-    print(f"Logged in as {bot.user}", flush=True)
+    print(f"Logged in as {bot.user}")
 
 
 @bot.event
@@ -170,20 +170,17 @@ async def on_message(message: discord.Message):
         lang = top.lang
         confidence = top.prob
         print(f"DEBUG: '{text}' -> lang={lang}, confidence={confidence:.2f}, "
-              f"looks_like_french={looks_like_french(text)}", flush=True)
+              f"looks_like_french={looks_like_french(text)}")
     except LangDetectException:
         await bot.process_commands(message)
         return
 
-    if (
-        looks_like_french(text)
-        and (lang in WATCHED_LANGUAGES and confidence > CONFIDENCE_THRESHOLD)
-    ):
-        lang = "fr"  # force French: either the heuristic caught it, or langdetect did
+    if looks_like_french(text):
+        lang = "fr"  # heuristic-confirmed; langdetect's label is unreliable on short text
         try:
             translated = translate_text(text, lang)
         except Exception as e:
-            print(f"Translation failed entirely: {e}", flush=True)
+            print(f"Translation failed entirely: {e}")
             await bot.process_commands(message)
             return
 
