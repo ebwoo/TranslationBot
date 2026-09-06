@@ -19,8 +19,8 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 # Config: which language(s) trigger translation, and where translations go
 WATCHED_LANGUAGES = {"fr"}   # ISO 639-1 codes
-TARGET_CHANNEL_ID = 920520291577393155   # channel where translations get posted
-SOURCE_CHANNEL_IDS = {1131000939923386478}  # channels to watch (optional filter)
+TARGET_CHANNEL_ID = 1545938608215556167   # channel where translations get posted
+SOURCE_CHANNEL_IDS = {1545989798093660280, 1518211425116491797, 1518212264501710968, 1518454285023838338, 1518308060261650644, 1518211425116491798}  # channels to watch (optional filter)
 
 # Minimum confidence required before acting on a detected language (0.0 - 1.0)
 CONFIDENCE_THRESHOLD = 0.85
@@ -135,7 +135,7 @@ async def on_message(message: discord.Message):
             )
             embed.add_field(name="Original", value=text[:1000], inline=False)
             embed.add_field(name="Translation", value=translated[:1000], inline=False)
-            await target_channel.send(content="**New translation:**", embed=embed)
+            await target_channel.send(content="# New malicious message", embed=embed)
 
     await bot.process_commands(message)
 
