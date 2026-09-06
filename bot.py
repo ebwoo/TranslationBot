@@ -100,22 +100,32 @@ FRENCH_STOPWORDS = {
     "cas", "place", "monde", "gens",
 }
 
+# Words that overlap with common standalone English words — on their own,
+# a single match isn't strong evidence of French (e.g. "a", "on" both occur
+# constantly in ordinary English sentences).
+AMBIGUOUS_WORDS = {"a", "on", "y", "en"}
+
+STRONG_FRENCH_WORDS = FRENCH_STOPWORDS - AMBIGUOUS_WORDS
+
 ACCENTED_CHARS = set("àâäéèêëîïôöùûüçœæ")
 
 
 def looks_like_french(text: str) -> bool:
-    """Sanity check independent of langdetect: require either an accented
-    character, or at least two common French words, to appear in the text.
-    Requiring two matches (rather than one) avoids false positives from
-    short words that are also valid English (e.g. 'a', 'on', 'y')."""
+    """Sanity check independent of langdetect: an accented character, OR at
+    least one unambiguous French word, OR at least two ambiguous words
+    together. This avoids false positives from single English-overlapping
+    words like 'a'/'on' while still catching real French that only uses
+    common short words."""
     lowered = text.lower()
 
     if any(char in ACCENTED_CHARS for char in lowered):
         return True
 
     words = re.findall(r"[a-zà-ÿ']+", lowered)
-    matches = sum(1 for word in words if word in FRENCH_STOPWORDS)
-    return matches >= 2
+    strong_matches = sum(1 for word in words if word in STRONG_FRENCH_WORDS)
+    ambiguous_matches = sum(1 for word in words if word in AMBIGUOUS_WORDS)
+
+    return strong_matches >= 1 or ambiguous_matches >= 2
 
 # Set up DeepL translator client once, reused for every message
 deepl_translator = deepl.Translator(DEEPL_KEY)
