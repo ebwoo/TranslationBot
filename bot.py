@@ -170,7 +170,7 @@ async def on_message(message: discord.Message):
         top = results[0]          # highest-probability guess
         lang = top.lang
         confidence = top.prob
-        print(f"DEBUG: '{text}' -> lang={lang}, confidence={confidence:.2f}, "
+        print(f"DEBU: '{text}' -> lang={lang}, confidence={confidence:.2f}, "
               f"looks_like_french={looks_like_french(text)}")
     except LangDetectException:
         await bot.process_commands(message)
