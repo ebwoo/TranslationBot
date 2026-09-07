@@ -28,7 +28,7 @@ CONFIDENCE_THRESHOLD = 0.85
 FRENCH_STOPWORDS = {
     # Pronouns
     "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
-    "te", "t", "se", "s", "le", "la", "les", "lui",
+    "te", "se", "le", "la", "les", "lui",
     "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
     "t'as", "kiffer", "avoue",
 
