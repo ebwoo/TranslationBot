@@ -102,7 +102,7 @@ FRENCH_STOPWORDS = {
 
     # Negation
     "ne", "pas", "plus", "jamais", "rien", "personne",
-    "aucun", "aucune", "ni", "sans",
+    "aucun", "aucune", "sans",
 
     # Conjunctions
     "et", "ou", "mais", "donc", "car", "ni", "que", "qu",
@@ -205,7 +205,6 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
     
-    print(message.content)
     if URL_PATTERN.search(message.content):
         return
 
@@ -259,7 +258,7 @@ async def on_message(message: discord.Message):
             embed.add_field(name="Translation", value=translated[:1000], inline=False)
             if message.author.id in BLACKLISTED_BITCHES: 
                 embed.remove_field(1)
-                await target_channel.send(content="# New stupid message", embed=embed)
+                await target_channel.send(content="# New retard message", embed=embed)
                 return
             await target_channel.send(content="# New malicious message", embed=embed)
 
