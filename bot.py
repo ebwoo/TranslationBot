@@ -57,7 +57,7 @@ FRENCH_STOPWORDS = {
     "mettre", "mets", "met", "mettons", "mettez", "mettent",
 
     # Negation
-    "ne", "n", "pas", "plus", "jamais", "rien", "personne",
+    "ne", "pas", "plus", "jamais", "rien", "personne",
     "aucun", "aucune", "ni", "sans",
 
     # Conjunctions
@@ -77,7 +77,7 @@ FRENCH_STOPWORDS = {
     "quel", "quelle", "quels", "quelles", "combien",
 
     # Adverbs / common modifiers
-    "très", "trop", "bien", "mal", "plus", "moins", "beaucoup",
+    "très", "trop", "bien", "mal", "moins", "beaucoup",
     "peu", "assez", "aussi", "encore", "déjà", "toujours",
     "souvent", "parfois", "jamais", "maintenant", "ici", "là",
     "alors", "ainsi", "vraiment", "presque", "seulement",
@@ -122,6 +122,8 @@ def looks_like_french(text: str) -> bool:
     words = set(re.findall(r"[a-zà-ÿ']+", lowered))
     strong_matches = words & STRONG_FRENCH_WORDS
     ambiguous_matches = words & AMBIGUOUS_WORDS
+
+    print(f"Words detected: {strong_matches} and {ambiguous_matches}") 
 
     return len(strong_matches) >= 1 or len(ambiguous_matches) >= 2
 
