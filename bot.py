@@ -98,7 +98,7 @@ FRENCH_STOPWORDS = {
     "savoir", "sais", "sait", "savons", "savez", "savent",
     "prendre", "prends", "prend", "prenons", "prenez", "prennent",
     "donner", "donne", "donnes", "donnons", "donnez", "donnent",
-    "mettre", "mets", "met", "mettons", "mettez", "mettent",
+    "mettre", "mets", "mettons", "mettez", "mettent",
 
     # Negation
     "ne", "pas", "plus", "jamais", "rien", "personne",
@@ -151,6 +151,7 @@ STRONG_FRENCH_WORDS = FRENCH_STOPWORDS - AMBIGUOUS_WORDS
 
 ACCENTED_CHARS = set("àâäéèêëîïôöùûüçœæ")
 
+URL_PATTERN = re.compile(r'https?://[^\s]+')
 
 def looks_like_french(text: str) -> bool:
     """Sanity check independent of langdetect: an accented character, OR at
@@ -202,6 +203,9 @@ async def on_ready():
 async def on_message(message: discord.Message):
     # Ignore the bot's own messages
     if message.author.bot:
+        return
+    
+    if URL_PATTERN.search(message.content):
         return
 
     # Optional: only watch specific channels
