@@ -29,20 +29,20 @@ FRENCH_STOPWORDS = {
     # Pronouns
     "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
     "te", "se", "le", "la", "les", "lui",
-    "leur", "leurs", "eux", "moi", "toi", "soi", "y", "en",
+    "leur", "leurs", "eux", "moi", "toi", "soi","en",
     "t'as", "kiffer", "avoue",
 
     # Articles / determiners
-    "un", "une", "des", "du", "de", "d", "le", "la", "les", "l",
+    "un", "une", "des", "du", "de", "le", "la", "les",
     "au", "aux", "ce", "cet", "cette", "ces", "mon", "ma", "mes",
-    "ta", "tes", "son", "sa", "ses", "notre", "nos",
+    "ta", "tes", "sa", "ses", "notre", "nos",
     "votre", "vos", "leur", "leurs", "quel", "quelle", "quels",
     "quelles", "quelque", "quelques", "chaque", "tout", "toute",
     "tous", "toutes", "aucun", "aucune",
 
     # Common verbs
     "être", "est", "es", "suis", "sommes", "êtes", "sont",
-    "avoir", "ai", "avons", "avez", "ont",
+    "avoir", "avons", "avez", "ont",
     "faire", "fais", "fait", "faisons", "faites", "font",
     "aller", "vais", "vas", "va", "allons", "allez", "vont",
     "venir", "viens", "vient", "venons", "venez", "viennent",
@@ -94,7 +94,7 @@ FRENCH_STOPWORDS = {
 
     # Time / quantity words
     "fois", "jour", "jours", "ans", "année", "années",
-    "heure", "heures", "moment", "temps",
+    "heure", "heures", "temps",
 
 }
 
