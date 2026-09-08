@@ -26,13 +26,13 @@ google_creds = Credentials.from_service_account_info(
 )
 gc = gspread.authorize(google_creds)
 sheet = gc.open(SHEET_NAME).worksheet(WORKSHEET_NAME)
-
+"""
 intents = discord.Intents.default()
 intents.message_content = True  # required to read message text
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-
+"""
 # --Run history stuff--
 @bot.tree.command(name="logrun", description="Log a nightmare run to the spreadsheet")
 @app_commands.describe(
