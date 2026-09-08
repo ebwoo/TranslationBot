@@ -10,15 +10,16 @@ WORKSHEET_NAME = "Page 1"
 
 import re
 import discord
-import json
-import gspread
-from google.oauth2.service_account import Credentials
+# import json
+# import gspread
+# from google.oauth2.service_account import Credentials
 from discord import app_commands
 from discord.ext import commands
 from langdetect import detect_langs, LangDetectException
 from deep_translator import MyMemoryTranslator
 import deepl
 
+"""
 SHEET_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
 google_creds = Credentials.from_service_account_info(
     json.loads(GOOGLE_CREDENTIALS_JSON), scopes=SHEET_SCOPES
@@ -31,7 +32,7 @@ intents.message_content = True  # required to read message text
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
-"""
+
 # --Run history stuff--
 @bot.tree.command(name="logrun", description="Log a nightmare run to the spreadsheet")
 @app_commands.describe(
