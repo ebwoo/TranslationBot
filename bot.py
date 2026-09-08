@@ -66,7 +66,7 @@ FRENCH_STOPWORDS = {
     "parce", "pourtant", "cependant", "ainsi", "alors",
 
     # Prepositions
-    "à", "de", "d", "en", "dans", "sur", "sous", "avec",
+    "à", "de", "en", "dans", "sur", "sous", "avec",
     "sans", "pour", "par", "chez", "entre", "vers", "contre",
     "avant", "après", "depuis", "pendant", "durant", "selon",
     "devant", "derrière", "près", "loin", "parmi", "autour",
