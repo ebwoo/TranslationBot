@@ -4,23 +4,66 @@ import os
 load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 DEEPL_KEY = os.getenv("DEEPL_API_KEY")
+GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
+SHEET_NAME = "House Newgens 2 Personal Bests"
+WORKSHEET_NAME = "Page 1"
 
 import re
 import discord
+import json
+import gspread
+from google.oauth2.service_account import Credentials
+from discord import app_commands
 from discord.ext import commands
 from langdetect import detect_langs, LangDetectException
 from deep_translator import MyMemoryTranslator
 import deepl
+
+SHEET_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
+google_creds = Credentials.from_service_account_info(
+    json.loads(GOOGLE_CREDENTIALS_JSON), scopes=SHEET_SCOPES
+)
+gc = gspread.authorize(google_creds)
+sheet = gc.open(SHEET_NAME).worksheet(WORKSHEET_NAME)
 
 intents = discord.Intents.default()
 intents.message_content = True  # required to read message text
 
 bot = commands.Bot(command_prefix="!", intents=intents)
 
+"""
+# --Run history stuff--
+@bot.tree.command(name="logrun", description="Log a nightmare run to the spreadsheet")
+@app_commands.describe(
+    player_name="Name of the player",
+    roundnumber="Round reached",
+    monster="Monster"
+)
+@app_commands.choices(difficulty=[
+    app_commands.Choice(name="Easy", value="Easy"),
+    app_commands.Choice(name="Medium", value="Medium"),
+    app_commands.Choice(name="Hard", value="Hard"),
+])
+async def logrun(
+    interaction: discord.Interaction,
+    player_name: str,
+    roundnumber: int,
+    monster: app_commands.Choice[str]
+):
+    sheet.append_row([player_name, roundnumber, monster.value, str(interaction.user)])
+    await interaction.response.send_message(
+        f"Logged: {player_name} — Round {roundnumber}, ({monster.value})"
+    )
+"""
+
+# --Translation Stuff--
+
 # Config: which language(s) trigger translation, and where translations go
 WATCHED_LANGUAGES = {"fr"}   # ISO 639-1 codes
 TARGET_CHANNEL_ID = 1545938608215556167   # channel where translations get posted
 SOURCE_CHANNEL_IDS = {1518211425116491797, 1518454285023838338, 1518212264501710968, 1518308060261650644, 1545989798093660280, 1518211425116491798}  # channels to watch (optional filter)
+
+BLACKLISTED_BITCHES = {606741399370727446}
 
 # Minimum confidence required before acting on a detected language (0.0 - 1.0)
 CONFIDENCE_THRESHOLD = 0.85
@@ -38,7 +81,7 @@ FRENCH_STOPWORDS = {
     "ta", "tes", "sa", "ses", "notre", "nos",
     "votre", "vos", "leur", "leurs", "quel", "quelle", "quels",
     "quelles", "quelque", "quelques", "chaque", "tout", "toute",
-    "tous", "toutes", "aucun", "aucune",
+    "tous", "toutes", "aucun", "aucune", "grosse"
 
     # Common verbs
     "être", "est", "es", "suis", "sommes", "êtes", "sont",
@@ -150,6 +193,8 @@ def translate_text(text, source_lang):
 @bot.event
 async def on_ready():
     print(f"Logged in as {bot.user}")
+    await bot.tree.sync()
+    print("Slash commands synced", flush=True)
 
 
 @bot.event
@@ -206,6 +251,10 @@ async def on_message(message: discord.Message):
             )
             embed.add_field(name="Original", value=text[:1000], inline=False)
             embed.add_field(name="Translation", value=translated[:1000], inline=False)
+            if message.author.id in BLACKLISTED_BITCHES: 
+                embed.remove_field(name="Translation")
+                await target_channel.send(content="# New retard message", embed=embed)
+                return
             await target_channel.send(content="# New malicious message", embed=embed)
 
     await bot.process_commands(message)
