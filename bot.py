@@ -205,6 +205,7 @@ async def on_message(message: discord.Message):
     if message.author.bot:
         return
     
+    print(message.content)
     if URL_PATTERN.search(message.content):
         return
 
