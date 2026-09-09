@@ -68,6 +68,7 @@ def build_player_index():
 # normalized and matched against this list, so they don't need to type
 # it exactly.
 MONSTER_DATABASE = [
+    "diddywallfle17",
     "Baneful Rift",
     "Baneful Glitch",
     "Baneful Hunter",
