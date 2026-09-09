@@ -212,7 +212,7 @@ bot = commands.Bot(command_prefix="!", intents=intents)
 
 async def player_autocomplete(interaction: discord.Interaction, current: str):
     current_lower = current.lower()
-    matches = [name for name in PLAYER_INDEX if current_lower in name.lower()]
+    matches = sorted(name for name in PLAYER_INDEX if current_lower in name.lower())
     return [app_commands.Choice(name=name, value=name) for name in matches[:25]]
 
 
@@ -277,7 +277,9 @@ async def logrun(
             "fontFamily": "Nunito",
             "fontSize": 10,
             "foregroundColor": {"red": 1, "green": 1, "blue": 1},
-        }
+        },
+        "horizontalAlignment": "CENTER",
+        "verticalAlignment": "MIDDLE",
     })
 
     await interaction.followup.send(
