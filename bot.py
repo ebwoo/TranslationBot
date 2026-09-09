@@ -300,12 +300,6 @@ async def logrun(
         )
         return
 
-    if roundnumber > 50:
-        await interaction.followup.send(
-            f"Round {roundnumber} is above the max of 50"
-        )
-        return
-
     canonical_monster = MONSTER_LOOKUP.get(normalize_monster(monster))
     if canonical_monster is None:
         await interaction.followup.send(
