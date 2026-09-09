@@ -302,7 +302,7 @@ async def logrun(
 
     if roundnumber > 50:
         await interaction.followup.send(
-            f"No"
+            f"Round {roundnumber} is above the max of 50"
         )
         return
 
