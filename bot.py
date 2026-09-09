@@ -294,9 +294,9 @@ async def logrun(
 ):
     await interaction.response.defer()
 
-    if roundnumber > 50:
+    if roundnumber > 50 or < 0:
         await interaction.followup.send(
-            f"Round {roundnumber} is above the max of 50 — double check the number and try again."
+            f"Round {roundnumber} is invalid"
         )
         return
 
