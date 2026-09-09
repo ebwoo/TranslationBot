@@ -270,6 +270,16 @@ async def logrun(
     end_cell = gspread.utils.rowcol_to_a1(5 + len(existing), col_index + 3)
     ws.update(f"{start_cell}:{end_cell}", existing)
 
+    # Match the sheet's existing text styling — otherwise new/rewritten
+    # rows fall back to Google Sheets' plain default formatting.
+    ws.format(f"{start_cell}:{end_cell}", {
+        "textFormat": {
+            "fontFamily": "Nunito",
+            "fontSize": 10,
+            "foregroundColor": {"red": 1, "green": 1, "blue": 1},
+        }
+    })
+
     await interaction.followup.send(
         f"Logged for **{player}**: Round {roundnumber} — {monster} ({date})"
     )
