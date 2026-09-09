@@ -294,6 +294,12 @@ async def logrun(
 ):
     await interaction.response.defer()
 
+    if roundnumber > 50:
+        await interaction.followup.send(
+            f"Round {roundnumber} is above the max of 50 — double check the number and try again."
+        )
+        return
+
     if player not in PLAYER_INDEX:
         await interaction.followup.send(
             f"Couldn't find '{player}' on the sheet. If they were just added, try /refreshplayers first."
