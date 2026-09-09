@@ -5,7 +5,11 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 DEEPL_KEY = os.getenv("DEEPL_API_KEY")
 GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
-SHEET_NAME = "House Newgens 2 Personal Bests"
+
+# The ID from the sheet's URL: docs.google.com/spreadsheets/d/THIS_PART/edit
+# Using the ID (not the title) avoids ambiguity if two sheets ever share a
+# name, and avoids needing Drive API scope just to look up a title.
+SHEET_ID = os.getenv("SHEET_ID")
 
 import re
 import discord
@@ -41,7 +45,7 @@ def build_player_index():
     player name -> (worksheet_title, column_index). Player names live on
     row 2, with the Round/Monster/Date subheaders on row 4 beneath them."""
     index = {}
-    spreadsheet = gc.open(SHEET_NAME)
+    spreadsheet = gc.open_by_key(SHEET_ID)
     for ws in spreadsheet.worksheets():
         if ws.title in SKIP_WORKSHEETS:
             continue
@@ -60,6 +64,9 @@ def build_player_index():
 
 
 # Fill this in with every monster name as you want it to appear on the
+# sheet (proper capitalization/spacing). Whatever the user types gets
+# normalized and matched against this list, so they don't need to type
+# it exactly.
 MONSTER_DATABASE = [
     "Baneful Rift",
     "Baneful Glitch",
@@ -130,6 +137,7 @@ MONSTER_DATABASE = [
     "Bear Trap",
     "Baneful Rot",
     "Reprieve",
+    "The True Nightmare",
 ]
 
 # Shorthand/abbreviations people might type -> the canonical name from
@@ -159,7 +167,7 @@ MONSTER_ALIASES = {
     "dread": "Baneful Dread",
     "tnm": "The True Nightmare",
     "larry": "The Singularity",
-    "carrion god": "The Carrion God"
+    "carrion god": "The Carrion God",
 }
 
 
@@ -241,7 +249,7 @@ async def logrun(
     monster = canonical_monster
 
     worksheet_title, col_index = PLAYER_INDEX[player]
-    ws = gc.open(SHEET_NAME).worksheet(worksheet_title)
+    ws = gc.open_by_key(SHEET_ID).worksheet(worksheet_title)
 
     all_values = ws.get_all_values()
 
