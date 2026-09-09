@@ -202,6 +202,71 @@ for alias, canonical in MONSTER_ALIASES.items():
     MONSTER_LOOKUP[normalize_monster(alias)] = canonical
 
 
+def normalize_for_stats(name: str) -> str:
+    """Like normalize_monster, but also strips a leading 'the' — the Stats
+    sheet sometimes omits it (e.g. 'Periscope' instead of 'The Periscope'),
+    so both sides need to be reduced to the same form to match reliably."""
+    n = normalize_monster(name)
+    if n.startswith("the"):
+        n = n[3:]
+    return n
+
+
+def reorder_stats_sheet():
+    """Read the 'Stats' worksheet's Monster/Kills rows, sort them by Kills
+    descending, and rewrite only if the order has actually changed. Ties
+    keep their existing relative order (stable sort), so a monster tied
+    with others doesn't jump around unnecessarily."""
+    ws = gc.open_by_key(SHEET_ID).worksheet("Stats")
+    values = ws.get_all_values()
+
+    header_row_idx = monster_col = kills_col = None
+    for i, row in enumerate(values):
+        if "Monster" in row and "Kills" in row:
+            header_row_idx = i
+            monster_col = row.index("Monster")
+            kills_col = row.index("Kills")
+            break
+
+    if header_row_idx is None:
+        print("WARNING: couldn't find 'Monster'/'Kills' headers on the "
+              "Stats sheet — order not checked.", flush=True)
+        return
+
+    data_rows = []
+    for row in values[header_row_idx + 1:]:
+        if len(row) > monster_col and row[monster_col].strip():
+            name = row[monster_col]
+            kills_str = row[kills_col].strip() if len(row) > kills_col else ""
+            try:
+                kills = int(kills_str)
+            except ValueError:
+                kills = 0
+            data_rows.append((name, kills))
+
+    sorted_rows = sorted(data_rows, key=lambda r: -r[1])
+
+    if sorted_rows == data_rows:
+        return  # already in the right order, nothing to rewrite
+
+    start_row = header_row_idx + 2  # first data row, 1-indexed
+    end_row = start_row + len(sorted_rows) - 1
+
+    # Update the Monster and Kills columns separately (rather than one
+    # combined range) so this doesn't touch any columns that might sit
+    # between them.
+    monster_range = (
+        f"{gspread.utils.rowcol_to_a1(start_row, monster_col + 1)}:"
+        f"{gspread.utils.rowcol_to_a1(end_row, monster_col + 1)}"
+    )
+    kills_range = (
+        f"{gspread.utils.rowcol_to_a1(start_row, kills_col + 1)}:"
+        f"{gspread.utils.rowcol_to_a1(end_row, kills_col + 1)}"
+    )
+    ws.update(monster_range, [[name] for name, _ in sorted_rows])
+    ws.update(kills_range, [[kills] for _, kills in sorted_rows])
+
+
 intents = discord.Intents.default()
 intents.message_content = True  # required to read message text
 
@@ -281,6 +346,13 @@ async def logrun(
         "horizontalAlignment": "CENTER",
         "verticalAlignment": "MIDDLE",
     })
+
+    # Since kill counts already auto-update elsewhere, just check whether
+    # this changes where the monster should rank and reorder if so.
+    try:
+        reorder_stats_sheet()
+    except Exception as e:
+        print(f"Failed to reorder Stats sheet: {e}", flush=True)
 
     await interaction.followup.send(
         f"Logged for **{player}**: Round {roundnumber} — {monster} ({date})"
