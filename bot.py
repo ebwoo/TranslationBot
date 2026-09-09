@@ -213,10 +213,13 @@ def normalize_for_stats(name: str) -> str:
 
 
 def reorder_stats_sheet():
-    """Read the 'Stats' worksheet's Monster/Kills rows, sort them by Kills
-    descending, and rewrite only if the order has actually changed. Ties
-    keep their existing relative order (stable sort), so a monster tied
-    with others doesn't jump around unnecessarily."""
+    """Read the 'Stats' worksheet's Monster/Kills rows, sort by Kills
+    descending, and rewrite ONLY the Monster column if the order needs to
+    change. The Kills column is deliberately never written to — it's driven
+    by a formula (auto-counting from the player sheets), and each row's
+    formula recalculates on its own once the correct monster name is
+    sitting in that row. Writing to Kills directly would overwrite the
+    formula with a static number and break the auto-updating."""
     ws = gc.open_by_key(SHEET_ID).worksheet("Stats")
     values = ws.get_all_values()
 
@@ -246,25 +249,17 @@ def reorder_stats_sheet():
 
     sorted_rows = sorted(data_rows, key=lambda r: -r[1])
 
-    if sorted_rows == data_rows:
+    if [name for name, _ in sorted_rows] == [name for name, _ in data_rows]:
         return  # already in the right order, nothing to rewrite
 
     start_row = header_row_idx + 2  # first data row, 1-indexed
     end_row = start_row + len(sorted_rows) - 1
 
-    # Update the Monster and Kills columns separately (rather than one
-    # combined range) so this doesn't touch any columns that might sit
-    # between them.
     monster_range = (
         f"{gspread.utils.rowcol_to_a1(start_row, monster_col + 1)}:"
         f"{gspread.utils.rowcol_to_a1(end_row, monster_col + 1)}"
     )
-    kills_range = (
-        f"{gspread.utils.rowcol_to_a1(start_row, kills_col + 1)}:"
-        f"{gspread.utils.rowcol_to_a1(end_row, kills_col + 1)}"
-    )
     ws.update(monster_range, [[name] for name, _ in sorted_rows])
-    ws.update(kills_range, [[kills] for _, kills in sorted_rows])
 
 
 intents = discord.Intents.default()
