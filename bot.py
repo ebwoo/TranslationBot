@@ -12,6 +12,7 @@ GOOGLE_CREDENTIALS_JSON = os.getenv("GOOGLE_CREDENTIALS_JSON")
 SHEET_ID = os.getenv("SHEET_ID")
 
 import re
+import asyncio
 import discord
 import json
 import gspread
@@ -68,7 +69,6 @@ def build_player_index():
 # normalized and matched against this list, so they don't need to type
 # it exactly.
 MONSTER_DATABASE = [
-    "diddywallfle17",
     "Baneful Rift",
     "Baneful Glitch",
     "Baneful Hunter",
@@ -213,56 +213,6 @@ def normalize_for_stats(name: str) -> str:
     return n
 
 
-def reorder_stats_sheet():
-    """Read the 'Stats' worksheet's Monster/Kills rows, sort by Kills
-    descending, and rewrite ONLY the Monster column if the order needs to
-    change. The Kills column is deliberately never written to — it's driven
-    by a formula (auto-counting from the player sheets), and each row's
-    formula recalculates on its own once the correct monster name is
-    sitting in that row. Writing to Kills directly would overwrite the
-    formula with a static number and break the auto-updating."""
-    ws = gc.open_by_key(SHEET_ID).worksheet("Stats")
-    values = ws.get_all_values()
-
-    header_row_idx = monster_col = kills_col = None
-    for i, row in enumerate(values):
-        if "Monster" in row and "Kills" in row:
-            header_row_idx = i
-            monster_col = row.index("Monster")
-            kills_col = row.index("Kills")
-            break
-
-    if header_row_idx is None:
-        print("WARNING: couldn't find 'Monster'/'Kills' headers on the "
-              "Stats sheet — order not checked.", flush=True)
-        return
-
-    data_rows = []
-    for row in values[header_row_idx + 1:]:
-        if len(row) > monster_col and row[monster_col].strip():
-            name = row[monster_col]
-            kills_str = row[kills_col].strip() if len(row) > kills_col else ""
-            try:
-                kills = int(kills_str)
-            except ValueError:
-                kills = 0
-            data_rows.append((name, kills))
-
-    sorted_rows = sorted(data_rows, key=lambda r: -r[1])
-
-    if [name for name, _ in sorted_rows] == [name for name, _ in data_rows]:
-        return  # already in the right order, nothing to rewrite
-
-    start_row = header_row_idx + 2  # first data row, 1-indexed
-    end_row = start_row + len(sorted_rows) - 1
-
-    monster_range = (
-        f"{gspread.utils.rowcol_to_a1(start_row, monster_col + 1)}:"
-        f"{gspread.utils.rowcol_to_a1(end_row, monster_col + 1)}"
-    )
-    ws.update(monster_range, [[name] for name, _ in sorted_rows])
-
-
 intents = discord.Intents.default()
 intents.message_content = True  # required to read message text
 
@@ -277,45 +227,11 @@ async def player_autocomplete(interaction: discord.Interaction, current: str):
     return [app_commands.Choice(name=name, value=name) for name in matches[:25]]
 
 
-@bot.tree.command(name="logrun", description="Log a nightmare run to the spreadsheet")
-@app_commands.describe(
-    player="Your name as it appears on the sheet",
-    roundnumber="Round reached",
-    monster="Monster name",
-    date="Date (e.g. 9/8/26) — leave blank for N/A"
-)
-@app_commands.autocomplete(player=player_autocomplete)
-async def logrun(
-    interaction: discord.Interaction,
-    player: str,
-    roundnumber: int,
-    monster: str,
-    date: str = "N/A"
-):
-    await interaction.response.defer()
-
-    if roundnumber > 50 or roundnumber < 0:
-        await interaction.followup.send(
-            f"Round {roundnumber} is invalid"
-        )
-        return
-
-    if player not in PLAYER_INDEX:
-        await interaction.followup.send(
-            f"Couldn't find '{player}' on the sheet. If they were just added, try /refreshplayers first."
-        )
-        return
-
-    canonical_monster = MONSTER_LOOKUP.get(normalize_monster(monster))
-    if canonical_monster is None:
-        await interaction.followup.send(
-            f"Couldn't match '{monster}' to a known monster. Check the spelling, "
-            "or ask for it to be added to the database."
-        )
-        return
-    monster = canonical_monster
-
-    worksheet_title, col_index = PLAYER_INDEX[player]
+def _write_run_to_sheet(worksheet_title, col_index, roundnumber, monster, date):
+    """Blocking Sheets work for /logrun: read the player's existing entries,
+    insert the new one in round order, apply formatting, and reorder the
+    Stats sheet if needed. Runs on a background thread via asyncio.to_thread
+    so it can't freeze the bot's event loop while waiting on the network."""
     ws = gc.open_by_key(SHEET_ID).worksheet(worksheet_title)
 
     all_values = ws.get_all_values()
@@ -349,12 +265,57 @@ async def logrun(
         "verticalAlignment": "MIDDLE",
     })
 
-    # Since kill counts already auto-update elsewhere, just check whether
-    # this changes where the monster should rank and reorder if so.
+
+@bot.tree.command(name="logrun", description="Log a nightmare run to the spreadsheet")
+@app_commands.describe(
+    player="Your name as it appears on the sheet",
+    roundnumber="Round reached",
+    monster="Monster name",
+    date="Date (e.g. 9/8/26) — leave blank for N/A"
+)
+@app_commands.autocomplete(player=player_autocomplete)
+async def logrun(
+    interaction: discord.Interaction,
+    player: str,
+    roundnumber: int,
+    monster: str,
+    date: str = "N/A"
+):
+    await interaction.response.defer()
+
+    if roundnumber > 50:
+        await interaction.followup.send(
+            f"Round {roundnumber} is above the max of 50 — double check the number and try again."
+        )
+        return
+
+    if player not in PLAYER_INDEX:
+        await interaction.followup.send(
+            f"Couldn't find '{player}' on the sheet. If they were just added, try /refreshplayers first."
+        )
+        return
+
+    canonical_monster = MONSTER_LOOKUP.get(normalize_monster(monster))
+    if canonical_monster is None:
+        await interaction.followup.send(
+            f"Couldn't match '{monster}' to a known monster. Check the spelling, "
+            "or ask for it to be added to the database."
+        )
+        return
+    monster = canonical_monster
+
+    worksheet_title, col_index = PLAYER_INDEX[player]
+
     try:
-        reorder_stats_sheet()
+        await asyncio.to_thread(
+            _write_run_to_sheet, worksheet_title, col_index, roundnumber, monster, date
+        )
     except Exception as e:
-        print(f"Failed to reorder Stats sheet: {e}", flush=True)
+        print(f"Failed to write run to sheet: {e}", flush=True)
+        await interaction.followup.send(
+            "Something went wrong writing to the sheet — try again in a moment."
+        )
+        return
 
     await interaction.followup.send(
         f"Logged for **{player}**: Round {roundnumber} — {monster} ({date})"
@@ -365,7 +326,7 @@ async def logrun(
 async def refreshplayers(interaction: discord.Interaction):
     await interaction.response.defer()
     global PLAYER_INDEX
-    PLAYER_INDEX = build_player_index()
+    PLAYER_INDEX = await asyncio.to_thread(build_player_index)
     await interaction.followup.send(f"Refreshed — found {len(PLAYER_INDEX)} players across the sheet.")
 
 
@@ -376,7 +337,7 @@ WATCHED_LANGUAGES = {"fr"}   # ISO 639-1 codes
 TARGET_CHANNEL_ID = 1545938608215556167   # channel where translations get posted
 SOURCE_CHANNEL_IDS = {1518211425116491797, 1518454285023838338, 1518212264501710968, 1518308060261650644, 1545989798093660280, 1518211425116491798}  # channels to watch (optional filter)
 
-BLACKLISTED_PEOPLE = {606741399370727446, 273247843484172289}
+BLACKLISTED_PEOPLE = {606741399370727446}
 
 # Minimum confidence required before acting on a detected language (0.0 - 1.0)
 CONFIDENCE_THRESHOLD = 0.85
@@ -508,7 +469,9 @@ def translate_text(text, source_lang):
 async def on_ready():
     global PLAYER_INDEX
     print(f"Logged in as {bot.user}")
-    PLAYER_INDEX = build_player_index()
+    # Run the blocking Sheets API call in a background thread so it can't
+    # freeze the bot's event loop (and Discord heartbeat) if Google is slow.
+    PLAYER_INDEX = await asyncio.to_thread(build_player_index)
     print(f"Loaded {len(PLAYER_INDEX)} players from sheet", flush=True)
     await bot.tree.sync()
     print("Slash commands synced", flush=True)
