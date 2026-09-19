@@ -309,21 +309,21 @@ async def logrun(
 
     if roundnumber > 50:
         await interaction.followup.send(
-            f"Round {roundnumber} is above the max of 50 - double check the number and try again."
+            f"Round {roundnumber} is above the max of 50 - double check the number and try again.",
             ephemeral=True
         )
         return
 
     if roundnumber < 20:
         await interaction.followup.send(
-            f"dfa is going to fucking kill you if you try to log another <20 run"
+            f"dfa is going to fucking kill you if you try to log another <20 run",
             ephemeral=True
         )
         return
 
     if player not in PLAYER_INDEX:
         await interaction.followup.send(
-            f"Couldn't find '{player}' on the sheet. If they were just added, try /refreshplayers first."
+            f"Couldn't find '{player}' on the sheet. If they were just added, try /refreshplayers first.",
             ephemeral=True
         )
         return
@@ -332,7 +332,7 @@ async def logrun(
     if canonical_monster is None:
         await interaction.followup.send(
             f"Couldn't match '{monster}' to a known monster. Check the spelling, "
-            "or ask for it to be added to the database."
+            "or ask for it to be added to the database.",
             ephemeral=True
         )
         return
