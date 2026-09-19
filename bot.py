@@ -305,18 +305,16 @@ async def logrun(
     monster: str,
     date: str = "N/A"
 ):
-    await interaction.response.defer()
-
     if roundnumber > 50:
         await interaction.response.send_message(
-            f"Round {roundnumber} is above the max of 50 - double check the number and try again.",
+            f"Round {roundnumber} is above the max of 50 — double check the number and try again.",
             ephemeral=True
         )
         return
 
     if roundnumber < 20:
         await interaction.response.send_message(
-            f"dfa is going to fucking kill you if you try to log another <20 run",
+            "dfa is going to fucking kill you if you try to log another <20 run",
             ephemeral=True
         )
         return
@@ -339,6 +337,10 @@ async def logrun(
     monster = canonical_monster
 
     worksheet_title, col_index = PLAYER_INDEX[player]
+
+    # Only defer once every instant, no-network check above has passed —
+    # this is the point where we're actually about to do slow Sheets work.
+    await interaction.response.defer()
 
     try:
         await asyncio.to_thread(
