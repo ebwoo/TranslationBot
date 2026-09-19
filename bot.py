@@ -36,7 +36,7 @@ SKIP_WORKSHEETS = {"Templates", "Stats"}
 
 # Cache of player name -> (worksheet_title, column_index). Built at startup
 # and rebuildable on demand via /refreshplayers, so we don't hit the Sheets
-# API on every keystroke of autocomplete.
+# API on every keystroke of autocompletea.
 PLAYER_INDEX = {}
 
 
