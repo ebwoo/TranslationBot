@@ -265,11 +265,17 @@ def _write_run_to_sheet(worksheet_title, col_index, roundnumber, monster, date):
         "verticalAlignment": "MIDDLE",
     })
 
-    # Override to red (#cc0000) for any row logging "The Executioner" —
-    # applied after the white formatting above so it takes precedence on
-    # just those specific rows.
+    # Override the default white text for special rows — checked in
+    # priority order, so a row that's both "The Executioner" AND round 50
+    # gets the Executioner color rather than the round-50 color.
     for i, (r, m, d) in enumerate(existing):
+        override_color = None
         if m == "The Executioner":
+            override_color = {"red": 0.8, "green": 0, "blue": 0}       # #cc0000
+        elif r.strip() == "50":
+            override_color = {"red": 0.4, "green": 0, "blue": 0}       # #660000
+
+        if override_color:
             row_num = 6 + i
             row_start = gspread.utils.rowcol_to_a1(row_num, col_index + 1)
             row_end = gspread.utils.rowcol_to_a1(row_num, col_index + 3)
@@ -277,7 +283,7 @@ def _write_run_to_sheet(worksheet_title, col_index, roundnumber, monster, date):
                 "textFormat": {
                     "fontFamily": "Nunito",
                     "fontSize": 10,
-                    "foregroundColor": {"red": 0.8, "green": 0, "blue": 0},
+                    "foregroundColor": override_color,
                 },
                 "horizontalAlignment": "CENTER",
                 "verticalAlignment": "MIDDLE",
