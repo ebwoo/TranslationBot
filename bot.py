@@ -36,7 +36,7 @@ SKIP_WORKSHEETS = {"Templates", "Stats"}
 
 # Cache of player name -> (worksheet_title, column_index). Built at startup
 # and rebuildable on demand via /refreshplayers, so we don't hit the Sheets
-# API on every keystroke of autocompletea.
+# API on every keystroke of autocomplete.
 PLAYER_INDEX = {}
 
 
@@ -264,6 +264,24 @@ def _write_run_to_sheet(worksheet_title, col_index, roundnumber, monster, date):
         "horizontalAlignment": "CENTER",
         "verticalAlignment": "MIDDLE",
     })
+
+    # Override to red (#cc0000) for any row logging "The Executioner" —
+    # applied after the white formatting above so it takes precedence on
+    # just those specific rows.
+    for i, (r, m, d) in enumerate(existing):
+        if m == "The Executioner":
+            row_num = 6 + i
+            row_start = gspread.utils.rowcol_to_a1(row_num, col_index + 1)
+            row_end = gspread.utils.rowcol_to_a1(row_num, col_index + 3)
+            ws.format(f"{row_start}:{row_end}", {
+                "textFormat": {
+                    "fontFamily": "Nunito",
+                    "fontSize": 10,
+                    "foregroundColor": {"red": 0.8, "green": 0, "blue": 0},
+                },
+                "horizontalAlignment": "CENTER",
+                "verticalAlignment": "MIDDLE",
+            })
 
 
 @bot.tree.command(name="logrun", description="Log a nightmare run to the spreadsheet")
