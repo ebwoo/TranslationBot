@@ -309,9 +309,14 @@ async def logrun(
 
     if roundnumber > 50:
         await interaction.followup.send(
-            f"Round {roundnumber} is above the max of 50 — double check the number and try again."
+            f"Round {roundnumber} is above the max of 50 - double check the number and try again."
         )
         return
+
+    if roundnumber < 20:
+        await interaction.followup.send(
+            f"dfa is going to fucking kill you if you try to log another <20 run"
+        )
 
     if player not in PLAYER_INDEX:
         await interaction.followup.send(
