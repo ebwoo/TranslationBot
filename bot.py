@@ -13,13 +13,14 @@ SHEET_ID = os.getenv("SHEET_ID")
 
 import re
 import asyncio
+import datetime
 import discord
 import json
 import gspread
 import gspread.utils
 from google.oauth2.service_account import Credentials
 from discord import app_commands
-from discord.ext import commands
+from discord.ext import commands, tasks
 from langdetect import detect_langs, LangDetectException
 from deep_translator import MyMemoryTranslator
 import deepl
@@ -488,6 +489,60 @@ deepl_translator = deepl.Translator(DEEPL_KEY)
 MYMEMORY_LANG_MAP = {"fr": "fr-FR", "es": "es-ES", "de": "de-DE"}
 
 
+# --Daily ping stuff--
+
+PING_USER_ID = 1255677513296904222
+PING_LINK = "https://www.roblox.com/games/134651077207489/John-Man"
+
+# Channel the daily/manual ping gets posted in — a real mention (@user)
+# only notifies someone inside a channel they can see, a DM doesn't "ping"
+# in the Discord sense. Reusing TARGET_CHANNEL_ID here since that's already
+# a channel the bot posts to; change this if you want it somewhere else.
+PING_CHANNEL_ID = 1545938608215556167
+
+# What time (UTC) the daily ping fires. Adjust the hour/minute to taste —
+# e.g. datetime.time(hour=16, minute=0) for noon Eastern during EDT.
+DAILY_PING_TIME = datetime.time(hour=12, minute=0)
+
+
+async def send_daily_ping():
+    channel = bot.get_channel(PING_CHANNEL_ID)
+    if channel is None:
+        print(f"Daily ping: couldn't find channel {PING_CHANNEL_ID}", flush=True)
+        return
+    await channel.send(f"<@{PING_USER_ID}> {PING_LINK}")
+
+
+@tasks.loop(time=DAILY_PING_TIME)
+async def daily_ping_task():
+    await send_daily_ping()
+
+
+@daily_ping_task.before_loop
+async def before_daily_ping_task():
+    # Don't let the loop fire before the bot has actually logged in and
+    # cached channels — mirrors the wait discord.py recommends for tasks
+    # started from on_ready.
+    await bot.wait_until_ready()
+
+
+@bot.tree.command(name="pingme", description="[Admin] Manually send the daily Roblox link ping right now")
+@app_commands.checks.has_permissions(administrator=True)
+async def pingme(interaction: discord.Interaction):
+    await send_daily_ping()
+    await interaction.response.send_message("Sent.", ephemeral=True)
+
+
+@pingme.error
+async def pingme_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    if isinstance(error, app_commands.MissingPermissions):
+        await interaction.response.send_message(
+            "You need administrator permissions to use this.", ephemeral=True
+        )
+    else:
+        raise error
+
+
 def translate_text(text, source_lang):
     """Try DeepL first; fall back to MyMemory if DeepL fails for any reason."""
     try:
@@ -511,6 +566,9 @@ async def on_ready():
     print(f"Loaded {len(PLAYER_INDEX)} players from sheet", flush=True)
     await bot.tree.sync()
     print("Slash commands synced", flush=True)
+
+    if not daily_ping_task.is_running():
+        daily_ping_task.start()
 
 
 @bot.event
