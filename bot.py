@@ -492,7 +492,7 @@ MYMEMORY_LANG_MAP = {"fr": "fr-FR", "es": "es-ES", "de": "de-DE"}
 # --Daily ping stuff--
 
 PING_USER_ID = 1255677513296904222
-PING_LINK = "https://www.roblox.com/games/134651077207489/John-Man"
+PING_LINK = "https://www.roblox.com/games/102493622151341/My-Challenge-For-You"
 
 # Channel the daily/manual ping gets posted in — a real mention (@user)
 # only notifies someone inside a channel they can see, a DM doesn't "ping"
@@ -526,7 +526,7 @@ async def before_daily_ping_task():
     await bot.wait_until_ready()
 
 
-@bot.tree.command(name="pingme", description="[Admin] Manually send the daily Roblox link ping right now")
+@bot.tree.command(name="pingme", description="Cobra")
 @app_commands.checks.has_permissions(administrator=True)
 async def pingme(interaction: discord.Interaction):
     await send_daily_ping()
