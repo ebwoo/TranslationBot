@@ -430,12 +430,12 @@ async def viewstats(interaction: discord.Interaction, player: str):
 
     top_runs = sorted(runs, key=lambda run: run[0], reverse=True)[:5]
     top_runs_text = "\n".join(
-        f"**R{r}** — {m} ({d})" for r, m, d in top_runs
+        f"**Round {r}** — {m} ({d})" for r, m, d in top_runs
     )
 
     embed = discord.Embed(
         title=f"Stats for {player}",
-        color=discord.Color.dark_red()
+        color=discord.Color.dark_blue()
     )
     embed.add_field(name="Total runs", value=str(len(runs)), inline=True)
     embed.add_field(name="Best round", value=f"{best_round} ({best_monster})", inline=True)
