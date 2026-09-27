@@ -18,6 +18,7 @@ import discord
 import json
 import gspread
 import gspread.utils
+from collections import Counter
 from google.oauth2.service_account import Credentials
 from discord import app_commands
 from discord.ext import commands, tasks
@@ -365,6 +366,87 @@ async def refreshplayers(interaction: discord.Interaction):
     global PLAYER_INDEX
     PLAYER_INDEX = await asyncio.to_thread(build_player_index)
     await interaction.followup.send(f"Refreshed — found {len(PLAYER_INDEX)} players across the sheet.")
+
+
+def _read_player_runs(worksheet_title, col_index):
+    """Blocking Sheets read for /viewstats: return a list of
+    (round:int, monster:str, date:str) for one player's column block.
+    Same layout as /logrun — data starts on row 6."""
+    ws = gc.open_by_key(SHEET_ID).worksheet(worksheet_title)
+    all_values = ws.get_all_values()
+
+    runs = []
+    for row in all_values[5:]:
+        if len(row) < col_index + 3:
+            continue
+        r, m, d = (c.strip() for c in row[col_index:col_index + 3])
+        if not r:
+            continue
+        try:
+            runs.append((int(r), m, d or "N/A"))
+        except ValueError:
+            # Skip anything in the Round column that isn't a number
+            continue
+    return runs
+
+
+@bot.tree.command(name="viewstats", description="View a player's logged nightmare runs")
+@app_commands.describe(player="Player name as it appears on the sheet")
+@app_commands.autocomplete(player=player_autocomplete)
+async def viewstats(interaction: discord.Interaction, player: str):
+    if player not in PLAYER_INDEX:
+        await interaction.response.send_message(
+            f"Couldn't find '{player}' on the sheet. If they were just added, try /refreshplayers first.",
+            ephemeral=True
+        )
+        return
+
+    worksheet_title, col_index = PLAYER_INDEX[player]
+    await interaction.response.defer()
+
+    try:
+        runs = await asyncio.to_thread(_read_player_runs, worksheet_title, col_index)
+    except Exception as e:
+        print(f"Failed to read stats from sheet: {e}", flush=True)
+        await interaction.followup.send(
+            "Something went wrong reading the sheet — try again in a moment."
+        )
+        return
+
+    if not runs:
+        await interaction.followup.send(f"**{player}** has no runs logged yet.")
+        return
+
+    rounds = [r for r, _, _ in runs]
+    best_round, best_monster, best_date = max(runs, key=lambda run: run[0])
+    average = sum(rounds) / len(rounds)
+    round_50s = sum(1 for r in rounds if r == 50)
+    executioners = sum(1 for _, m, _ in runs if m == "The Executioner")
+
+    monster_counts = Counter(m for _, m, _ in runs if m)
+    common_monsters = "\n".join(
+        f"{m} — {count}x" for m, count in monster_counts.most_common(3)
+    ) or "N/A"
+
+    top_runs = sorted(runs, key=lambda run: run[0], reverse=True)[:5]
+    top_runs_text = "\n".join(
+        f"**R{r}** — {m} ({d})" for r, m, d in top_runs
+    )
+
+    embed = discord.Embed(
+        title=f"Stats for {player}",
+        color=discord.Color.dark_red()
+    )
+    embed.add_field(name="Total runs", value=str(len(runs)), inline=True)
+    embed.add_field(name="Best round", value=f"{best_round} ({best_monster})", inline=True)
+    embed.add_field(name="Average round", value=f"{average:.1f}", inline=True)
+    embed.add_field(name="Round 50s", value=str(round_50s), inline=True)
+    embed.add_field(name="Executioners", value=str(executioners), inline=True)
+    embed.add_field(name="Most common monsters", value=common_monsters, inline=False)
+    embed.add_field(name="Top 5 runs", value=top_runs_text, inline=False)
+    embed.set_footer(text=f"Sheet tab: {worksheet_title}")
+
+    await interaction.followup.send(embed=embed)
 
 
 # --Translation Stuff--
