@@ -625,6 +625,54 @@ async def pingme_error(interaction: discord.Interaction, error: app_commands.App
         raise error
 
 
+# --Jalapenos stuff--
+
+# Non-admin user who's also allowed to run /japalenos
+JALAPENO_ALLOWED_USER_ID = 1548778601720057928
+
+# Cooldown in seconds. key=None below makes it one shared cooldown for
+# everyone, so the ping can't be spammed by several people taking turns.
+JALAPENO_COOLDOWN_SECONDS = 300
+
+
+def admin_or_jalapeno_user():
+    """Pass if the user is a server admin OR the specific allowed user."""
+    def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.user.id == JALAPENO_ALLOWED_USER_ID:
+            return True
+        perms = getattr(interaction.user, "guild_permissions", None)
+        return bool(perms and perms.administrator)
+    return app_commands.check(predicate)
+
+
+# Checks run bottom-up, so the permission check runs before the cooldown —
+# that way someone without permission can't burn the cooldown for everyone.
+@bot.tree.command(name="japalenos", description="JALAPENOS")
+@app_commands.checks.cooldown(1, JALAPENO_COOLDOWN_SECONDS, key=None)
+@admin_or_jalapeno_user()
+async def japalenos(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        f"<@{PING_USER_ID}> JALAPENOS",
+        allowed_mentions=discord.AllowedMentions(users=True)
+    )
+
+
+@japalenos.error
+async def japalenos_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    # CommandOnCooldown is a subclass of CheckFailure, so it must come first
+    if isinstance(error, app_commands.CommandOnCooldown):
+        await interaction.response.send_message(
+            "sorry theres a 5 minute cooldown because of things like bobey",
+            ephemeral=True
+        )
+    elif isinstance(error, app_commands.CheckFailure):
+        await interaction.response.send_message(
+            "You don't have permission to use this.", ephemeral=True
+        )
+    else:
+        raise error
+
+
 def translate_text(text, source_lang):
     """Try DeepL first; fall back to MyMemory if DeepL fails for any reason."""
     try:
