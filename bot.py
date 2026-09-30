@@ -647,7 +647,7 @@ def admin_or_jalapeno_user():
 
 # Checks run bottom-up, so the permission check runs before the cooldown —
 # that way someone without permission can't burn the cooldown for everyone.
-@bot.tree.command(name="japalenos", description="JALAPENOS")
+@bot.tree.command(name="jalapenos", description="JALAPENOS")
 @app_commands.checks.cooldown(1, JALAPENO_COOLDOWN_SECONDS, key=None)
 @admin_or_jalapeno_user()
 async def japalenos(interaction: discord.Interaction):
