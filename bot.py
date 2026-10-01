@@ -314,9 +314,9 @@ async def logrun(
         )
         return
 
-    if roundnumber < 20:
+    if roundnumber < 10:
         await interaction.response.send_message(
-            "dfa is going to fucking kill you if you try to log another <20 run",
+            "Why are you logging a <10 run",
             ephemeral=True
         )
         return
