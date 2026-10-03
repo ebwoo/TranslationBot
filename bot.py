@@ -673,6 +673,19 @@ async def japalenos_error(interaction: discord.Interaction, error: app_commands.
         raise error
 
 
+# --The Smiling Complex stuff--
+
+TSC_LINK = "https://www.roblox.com/games/11320053165/The-Smiling-Complex"
+
+
+@bot.tree.command(name="tsc", description="SMILER")
+async def tsc(interaction: discord.Interaction):
+    await interaction.response.send_message(
+        f"<@{PING_USER_ID}> {TSC_LINK}",
+        allowed_mentions=discord.AllowedMentions(users=True)
+    )
+
+
 def translate_text(text, source_lang):
     """Try DeepL first; fall back to MyMemory if DeepL fails for any reason."""
     try:
