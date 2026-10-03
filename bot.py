@@ -677,13 +677,49 @@ async def japalenos_error(interaction: discord.Interaction, error: app_commands.
 
 TSC_LINK = "https://www.roblox.com/games/11320053165/The-Smiling-Complex"
 
+# Non-admin user who's also allowed to run /tsc
+TSC_ALLOWED_USER_ID = 1339294087643267182
 
+# Shared 5-minute cooldown, separate from /jalapenos's cooldown
+TSC_COOLDOWN_SECONDS = 300
+
+
+def admin_or_tsc_user():
+    """Pass if the user is a server admin OR the specific allowed user."""
+    def predicate(interaction: discord.Interaction) -> bool:
+        if interaction.user.id == TSC_ALLOWED_USER_ID:
+            return True
+        perms = getattr(interaction.user, "guild_permissions", None)
+        return bool(perms and perms.administrator)
+    return app_commands.check(predicate)
+
+
+# Same ordering trick as /jalapenos: permission check runs before the
+# cooldown, so unauthorized attempts don't burn the timer.
 @bot.tree.command(name="tsc", description="SMILER")
+@app_commands.checks.cooldown(1, TSC_COOLDOWN_SECONDS, key=None)
+@admin_or_tsc_user()
 async def tsc(interaction: discord.Interaction):
     await interaction.response.send_message(
         f"<@{PING_USER_ID}> {TSC_LINK}",
         allowed_mentions=discord.AllowedMentions(users=True)
     )
+
+
+@tsc.error
+async def tsc_error(interaction: discord.Interaction, error: app_commands.AppCommandError):
+    # CommandOnCooldown is a subclass of CheckFailure, so it must come first
+    if isinstance(error, app_commands.CommandOnCooldown):
+        await interaction.response.send_message(
+            "sorry theres a 5 minute cooldown because of things like bobey",
+            ephemeral=True
+        )
+    elif isinstance(error, app_commands.CheckFailure):
+        await interaction.response.send_message(
+            "You don't have permission to use this.", ephemeral=True
+        )
+    else:
+        raise error
 
 
 def translate_text(text, source_lang):
