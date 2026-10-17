@@ -297,7 +297,7 @@ def _write_run_to_sheet(worksheet_title, col_index, roundnumber, monster, date):
     player="Your name as it appears on the sheet",
     roundnumber="Round reached",
     monster="Monster name",
-    date="Date (e.g. 9/8/26) — leave blank for N/A"
+    date="Date (e.g. 9/8/26) — Put N/A if you don't remember the date"
 )
 @app_commands.autocomplete(player=player_autocomplete)
 async def logrun(
@@ -305,7 +305,7 @@ async def logrun(
     player: str,
     roundnumber: int,
     monster: str,
-    date: str = "N/A"
+    date: str
 ):
     if roundnumber > 50:
         await interaction.response.send_message(
