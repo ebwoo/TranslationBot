@@ -371,12 +371,18 @@ async def start_duel(interaction: discord.Interaction, challenger, opponent, mod
     asyncio.create_task(_end_after_timeout(duel))
 
 
-async def finish(duel: Duel, text: str):
-    """Ends a duel: reveals the answer and swaps in the full clip."""
+def claim_end(duel: Duel) -> bool:
+    """Marks the duel as over, straight away and without waiting on Discord, so two
+    guesses arriving at nearly the same moment can't both win. True only for the first caller."""
     if duel.over:
-        return
+        return False
     duel.over = True
     DUELS.pop(duel.channel_id, None)
+    return True
+
+
+async def finish(duel: Duel, text: str):
+    """Reveals the answer and swaps in the full clip. Call claim_end() first."""
     duel.step = len(duel.steps) - 1
     duel.view.refresh_button()
     duel.view.stop()
@@ -391,7 +397,7 @@ async def finish(duel: Duel, text: str):
 
 async def _end_after_timeout(duel: Duel):
     await asyncio.sleep(DUEL_TIMEOUT)
-    if not duel.over:
+    if claim_end(duel):
         await finish(duel, "Time's up! Nobody got it.")
         # A new message too, so the answer shows up in the chat rather than only in an edit above.
         a, b = duel.players
@@ -412,6 +418,8 @@ async def handle_message(message: discord.Message) -> bool:
     if guess is None:
         return False   # just chatting, not a monster name
     if is_correct(guess, duel.monster):
+        if not claim_end(duel):
+            return True   # someone else's right answer got there a moment earlier
         await message.add_reaction("✅")
         # Discord's own timestamps: from when the clip was posted to when the right guess was sent.
         seconds = (message.created_at - duel.message.created_at).total_seconds()
