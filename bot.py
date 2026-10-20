@@ -25,6 +25,7 @@ from discord.ext import commands, tasks
 from langdetect import detect_langs, LangDetectException
 from deep_translator import MyMemoryTranslator
 import deepl
+import duel
 
 
 SHEET_SCOPES = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -219,6 +220,9 @@ intents = discord.Intents.default()
 intents.message_content = True  # required to read message text
 
 bot = commands.Bot(command_prefix="!", intents=intents)
+
+# /duel: Monsterdle duels (see duel.py)
+duel.setup(bot)
 
 
 # --Run history stuff--
@@ -754,6 +758,10 @@ async def on_ready():
 async def on_message(message: discord.Message):
     # Ignore the bot's own messages
     if message.author.bot:
+        return
+
+    # Guesses in an active Monsterdle duel are handled there, not translated
+    if await duel.handle_message(message):
         return
 
     if URL_PATTERN.search(message.content):
