@@ -21,7 +21,6 @@ MONSTERDLE_FILES = "https://raw.githubusercontent.com/ebwoo/monsterdle/main/"
 CHALLENGE_TIMEOUT = 60       # seconds the opponent has to accept
 DUEL_TIMEOUT = 60            # seconds before an unsolved duel ends
 HEAR_MORE_COOLDOWN = 3       # seconds after a "Hear more" press before it works again
-COUNTDOWN_EVERY = 10         # how often the "seconds left" in the duel message updates
 
 # --- Reading monsters.json (same rules as the website's lib/config.js) ---
 
@@ -240,7 +239,6 @@ class Duel:
         self.message = None
         self.view = None
         self.over = False
-        self.ends_at = time.time() + DUEL_TIMEOUT
         self.last_more = 0.0   # when "Hear more" was last pressed (time.monotonic)
 
     def is_player(self, user) -> bool:
@@ -259,13 +257,10 @@ class Duel:
                 f"## Monsterdle duel: {a.mention} vs {b.mention}",
                 f"**{self.mode_label}** · full {length:g}s clip · duel over",
             ])
-        # <t:…:T> shows the end time (with seconds) in each viewer's own time zone. Discord's
-        # "in X seconds" style doesn't tick every second, so the bot updates the seconds left itself.
-        left = max(0, round((self.ends_at - time.time()) / 5) * 5)
         return "\n".join([
             f"## Monsterdle duel: {a.mention} vs {b.mention}",
             f"**{self.mode_label}** · clip length **{length:g}s** · first to type the monster's name wins!",
-            f"Ends at <t:{int(self.ends_at)}:T> (about {left} seconds left)",
+            f"This round ends in {DUEL_TIMEOUT} seconds.",
             "-# Unlimited guesses · the forms in brackets don't need typing",
         ])
 
@@ -370,7 +365,6 @@ async def start_duel(interaction: discord.Interaction, challenger, opponent, mod
     if start_style(config, mode) == "random":
         duel.offset = random.uniform(0, max(0.0, mp3_duration(frames) - steps[-1]))
     DUELS[channel_id] = duel
-    duel.ends_at = time.time() + DUEL_TIMEOUT
     duel.view = ClipView(duel)
     duel.message = await interaction.followup.send(
         content=duel.status(), file=duel.clip_file(), view=duel.view, wait=True)
@@ -396,17 +390,7 @@ async def finish(duel: Duel, text: str):
 
 
 async def _end_after_timeout(duel: Duel):
-    # Counts down to the end time, refreshing the "seconds left" in the duel message as it goes.
-    while not duel.over:
-        left = duel.ends_at - time.time()
-        if left <= 0:
-            break
-        await asyncio.sleep(min(COUNTDOWN_EVERY, left))
-        if not duel.over and duel.ends_at - time.time() > 1:
-            try:
-                await duel.message.edit(content=duel.status())
-            except discord.HTTPException as e:
-                print(f"Couldn't update the duel countdown: {e}", flush=True)
+    await asyncio.sleep(DUEL_TIMEOUT)
     if not duel.over:
         await finish(duel, "Time's up! Nobody got it.")
         # A new message too, so the answer shows up in the chat rather than only in an edit above.
