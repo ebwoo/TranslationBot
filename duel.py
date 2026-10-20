@@ -20,7 +20,6 @@ MONSTERDLE_FILES = "https://raw.githubusercontent.com/ebwoo/monsterdle/main/"
 
 CHALLENGE_TIMEOUT = 60       # seconds the opponent has to accept
 DUEL_TIMEOUT = 180           # seconds before an unsolved duel ends
-MAX_WRONG_GUESSES = 3        # per player, so nobody can just list every monster
 
 # --- Reading monsters.json (same rules as the website's lib/config.js) ---
 
@@ -207,7 +206,6 @@ class Duel:
         self.frames = frames
         self.offset = 0.0
         self.step = 0
-        self.wrong = {challenger.id: 0, opponent.id: 0}
         self.message = None
         self.view = None
         self.over = False
@@ -229,10 +227,7 @@ class Duel:
             f"**{self.mode_label}** · full {length:g}s clip · duel over" if self.over else
             f"**{self.mode_label}** · clip length **{length:g}s** · first to type the monster's name wins!",
         ]
-        outs = [p.display_name for p in self.players if self.wrong[p.id] >= MAX_WRONG_GUESSES]
-        if outs:
-            lines.append(f"Out of guesses: {', '.join(outs)}")
-        lines.append(f"-# {MAX_WRONG_GUESSES} wrong guesses each · ends in {DUEL_TIMEOUT // 60} minutes if nobody gets it")
+        lines.append(f"-# Unlimited guesses · ends in {DUEL_TIMEOUT // 60} minutes if nobody gets it")
         return "\n".join(lines)
 
 
@@ -365,8 +360,6 @@ async def handle_message(message: discord.Message) -> bool:
     duel = DUELS.get(message.channel.id)
     if not duel or duel.over or not duel.is_player(message.author):
         return False
-    if duel.wrong[message.author.id] >= MAX_WRONG_GUESSES:
-        return False
     guess = find_monster(_config_cache["config"], message.content)
     if guess is None:
         return False   # just chatting, not a monster name
@@ -375,18 +368,7 @@ async def handle_message(message: discord.Message) -> bool:
         await finish(duel, f"🏆 **{message.author.mention} wins!** Guessed it with a {duel.steps[duel.step]:g}s clip.")
         return True
 
-    duel.wrong[message.author.id] += 1
-    left = MAX_WRONG_GUESSES - duel.wrong[message.author.id]
     await message.add_reaction("❌")
-    if all(n >= MAX_WRONG_GUESSES for n in duel.wrong.values()):
-        await finish(duel, "Both players are out of guesses. Nobody wins!")
-    else:
-        if left == 0:
-            await message.reply(f"{message.author.mention} is out of guesses!", mention_author=False)
-        try:
-            await duel.message.edit(content=duel.status())
-        except discord.HTTPException:
-            pass
     return True
 
 
