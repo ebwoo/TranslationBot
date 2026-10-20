@@ -387,6 +387,14 @@ async def _end_after_timeout(duel: Duel):
     await asyncio.sleep(DUEL_TIMEOUT)
     if not duel.over:
         await finish(duel, "Time's up! Nobody got it.")
+        # A new message too, so the answer shows up in the chat rather than only in an edit above.
+        a, b = duel.players
+        try:
+            await duel.message.channel.send(
+                f"Time's up! Neither {a.display_name} nor {b.display_name} guessed it. "
+                f"The monster was **{duel.monster['name']}**.")
+        except discord.HTTPException as e:
+            print(f"Couldn't send the time's-up message: {e}", flush=True)
 
 
 async def handle_message(message: discord.Message) -> bool:
