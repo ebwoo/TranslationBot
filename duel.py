@@ -88,22 +88,40 @@ def base_name(name: str) -> str:
     return re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
 
 
-def same_monster(a: dict, b: dict) -> bool:
-    """Different forms of a monster count as the same monster in duels, since
-    there's no dropdown to pick the exact form from."""
-    return _normalize(base_name(a["name"])) == _normalize(base_name(b["name"]))
+def has_form(name: str) -> bool:
+    return base_name(name) != name
+
+
+def is_correct(guess: dict, answer: dict) -> bool:
+    """The exact monster always counts. For a monster with a form in brackets,
+    typing the name without the brackets (or that name's aliases) counts too,
+    since duels have no dropdown to pick the form from. A different form is wrong:
+    'Tallman (Enraged)' doesn't count for 'Tallman', nor 'The Lich (Hunt)' for 'The Lich (Enraged)'."""
+    if guess["name"] == answer["name"]:
+        return True
+    return (has_form(answer["name"]) and not has_form(guess["name"])
+            and _normalize(guess["name"]) == _normalize(base_name(answer["name"])))
 
 
 def find_monster(config: dict, text: str):
     """The monster a message names, or None if it isn't a monster name at all.
     Ignores capitals, spaces and punctuation, makes a leading 'The' optional,
-    accepts aliases and names without the form in brackets, and forgives small typos."""
+    accepts aliases, and forgives small typos. A name without its brackets, like
+    'Sycophant', is recognised even when only bracketed forms exist."""
     typed = _normalize(text)
     if not typed or len(typed) > 40:
         return None
-    best, best_dist = None, None
+    # Every guessable name, plus bracket-free names that aren't monsters of their own.
+    candidates = list(config["monsters"])
+    plain = {_normalize(m["name"]) for m in candidates}
     for m in config["monsters"]:
-        targets = {_normalize(m["name"]), _normalize(base_name(m["name"]))} | {_normalize(a) for a in m["aliases"]}
+        base = base_name(m["name"])
+        if has_form(m["name"]) and _normalize(base) not in plain:
+            plain.add(_normalize(base))
+            candidates.append({"name": base, "aliases": []})
+    best, best_dist = None, None
+    for m in candidates:
+        targets = {_normalize(m["name"])} | {_normalize(a) for a in m["aliases"]}
         targets |= {t[3:] for t in list(targets) if t.startswith("the") and len(t) > 3}
         for target in targets:
             dist = _edit_distance(typed, target)
@@ -379,7 +397,7 @@ async def handle_message(message: discord.Message) -> bool:
     guess = find_monster(_config_cache["config"], message.content)
     if guess is None:
         return False   # just chatting, not a monster name
-    if same_monster(guess, duel.monster):
+    if is_correct(guess, duel.monster):
         await message.add_reaction("✅")
         # Discord's own timestamps: from when the clip was posted to when the right guess was sent.
         seconds = (message.created_at - duel.message.created_at).total_seconds()
