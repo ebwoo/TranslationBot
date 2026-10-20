@@ -19,7 +19,7 @@ from discord import app_commands
 MONSTERDLE_FILES = "https://raw.githubusercontent.com/ebwoo/monsterdle/main/"
 
 CHALLENGE_TIMEOUT = 60       # seconds the opponent has to accept
-DUEL_TIMEOUT = 180           # seconds before an unsolved duel ends
+DUEL_TIMEOUT = 30            # seconds before an unsolved duel ends
 
 # --- Reading monsters.json (same rules as the website's lib/config.js) ---
 
@@ -83,16 +83,27 @@ def _typo_allowance(length: int) -> int:
     return 2 if length >= 9 else 1 if length >= 5 else 0
 
 
+def base_name(name: str) -> str:
+    """A monster's name without its form: 'Tallman (Enraged)' -> 'Tallman'."""
+    return re.sub(r"\s*\([^)]*\)\s*$", "", name).strip()
+
+
+def same_monster(a: dict, b: dict) -> bool:
+    """Different forms of a monster count as the same monster in duels, since
+    there's no dropdown to pick the exact form from."""
+    return _normalize(base_name(a["name"])) == _normalize(base_name(b["name"]))
+
+
 def find_monster(config: dict, text: str):
     """The monster a message names, or None if it isn't a monster name at all.
     Ignores capitals, spaces and punctuation, makes a leading 'The' optional,
-    accepts aliases, and forgives small typos."""
+    accepts aliases and names without the form in brackets, and forgives small typos."""
     typed = _normalize(text)
     if not typed or len(typed) > 40:
         return None
     best, best_dist = None, None
     for m in config["monsters"]:
-        targets = {_normalize(m["name"])} | {_normalize(a) for a in m["aliases"]}
+        targets = {_normalize(m["name"]), _normalize(base_name(m["name"]))} | {_normalize(a) for a in m["aliases"]}
         targets |= {t[3:] for t in list(targets) if t.startswith("the") and len(t) > 3}
         for target in targets:
             dist = _edit_distance(typed, target)
@@ -209,7 +220,7 @@ class Duel:
         self.message = None
         self.view = None
         self.over = False
-        self.started = time.monotonic()
+        self.ends_at = int(time.time()) + DUEL_TIMEOUT
 
     def is_player(self, user) -> bool:
         return any(p.id == user.id for p in self.players)
@@ -222,13 +233,17 @@ class Duel:
     def status(self) -> str:
         a, b = self.players
         length = self.steps[self.step]
-        lines = [
-            f"## ⚔️ Monsterdle duel: {a.mention} vs {b.mention}",
-            f"**{self.mode_label}** · full {length:g}s clip · duel over" if self.over else
+        if self.over:
+            return "\n".join([
+                f"## Monsterdle duel: {a.mention} vs {b.mention}",
+                f"**{self.mode_label}** · full {length:g}s clip · duel over",
+            ])
+        # <t:…:R> is shown by Discord as a live countdown ("in 25 seconds").
+        return "\n".join([
+            f"## Monsterdle duel: {a.mention} vs {b.mention}",
             f"**{self.mode_label}** · clip length **{length:g}s** · first to type the monster's name wins!",
-        ]
-        lines.append(f"-# Unlimited guesses · ends in {DUEL_TIMEOUT // 60} minutes if nobody gets it")
-        return "\n".join(lines)
+            f"-# Unlimited guesses · the forms in brackets don't need typing · ends <t:{self.ends_at}:R>",
+        ])
 
 
 DUELS = {}   # channel id -> Duel
@@ -247,7 +262,7 @@ class ChallengeView(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(label="Accept", style=discord.ButtonStyle.success, emoji="⚔️")
+    @discord.ui.button(label="Accept", style=discord.ButtonStyle.success)
     async def accept(self, interaction: discord.Interaction, button: discord.ui.Button):
         self.answered = True
         self.stop()
@@ -288,7 +303,7 @@ class ClipView(discord.ui.View):
             return False
         return True
 
-    @discord.ui.button(label="Hear more", style=discord.ButtonStyle.primary, emoji="🔊")
+    @discord.ui.button(label="Hear more", style=discord.ButtonStyle.primary)
     async def more(self, interaction: discord.Interaction, button: discord.ui.Button):
         duel = self.duel
         if duel.over or duel.step >= len(duel.steps) - 1:
@@ -325,6 +340,7 @@ async def start_duel(interaction: discord.Interaction, challenger, opponent, mod
     if start_style(config, mode) == "random":
         duel.offset = random.uniform(0, max(0.0, mp3_duration(frames) - steps[-1]))
     DUELS[channel_id] = duel
+    duel.ends_at = int(time.time()) + DUEL_TIMEOUT
     duel.view = ClipView(duel)
     duel.message = await interaction.followup.send(
         content=duel.status(), file=duel.clip_file(), view=duel.view, wait=True)
@@ -352,7 +368,7 @@ async def finish(duel: Duel, text: str):
 async def _end_after_timeout(duel: Duel):
     await asyncio.sleep(DUEL_TIMEOUT)
     if not duel.over:
-        await finish(duel, "⏰ Time's up! Nobody got it.")
+        await finish(duel, "Time's up! Nobody got it.")
 
 
 async def handle_message(message: discord.Message) -> bool:
@@ -363,9 +379,17 @@ async def handle_message(message: discord.Message) -> bool:
     guess = find_monster(_config_cache["config"], message.content)
     if guess is None:
         return False   # just chatting, not a monster name
-    if guess["name"] == duel.monster["name"]:
+    if same_monster(guess, duel.monster):
         await message.add_reaction("✅")
-        await finish(duel, f"🏆 **{message.author.mention} wins!** Guessed it with a {duel.steps[duel.step]:g}s clip.")
+        # Discord's own timestamps: from when the clip was posted to when the right guess was sent.
+        seconds = (message.created_at - duel.message.created_at).total_seconds()
+        clip = duel.steps[duel.step]
+        await finish(duel, f"**{message.author.display_name} wins!** Guessed it with a {clip:g}s clip.")
+        await message.channel.send(
+            f"{message.author.mention} won the duel in **{seconds:.1f} seconds**! "
+            f"The monster was **{duel.monster['name']}**.",
+            allowed_mentions=discord.AllowedMentions(users=[message.author]),
+        )
         return True
 
     await message.add_reaction("❌")
@@ -394,7 +418,7 @@ def setup(bot):
             return
         view = ChallengeView(interaction.user, opponent, mode.value)
         await interaction.response.send_message(
-            f"⚔️ {opponent.mention}, {interaction.user.mention} challenges you to a **Monsterdle duel** "
+            f"{opponent.mention}, {interaction.user.mention} challenges you to a **Monsterdle duel** "
             f"(**{mode.name}** mode)! You have {CHALLENGE_TIMEOUT} seconds to accept.",
             view=view,
             allowed_mentions=discord.AllowedMentions(users=[opponent]),
