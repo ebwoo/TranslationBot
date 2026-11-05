@@ -145,6 +145,7 @@ MONSTER_DATABASE = [
     "The Circus",
     "The Whisperer",
     "Disconnect",
+    "Death Squadron",
 ]
 
 # Shorthand/abbreviations people might type -> the canonical name from
