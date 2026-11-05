@@ -141,6 +141,9 @@ MONSTER_DATABASE = [
     "Baneful Rot",
     "Reprieve",
     "The True Nightmare",
+    "The Circus",
+    "The Whisperer",
+    "Disconnect",
 ]
 
 # Shorthand/abbreviations people might type -> the canonical name from
