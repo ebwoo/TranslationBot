@@ -138,7 +138,6 @@ MONSTER_DATABASE = [
     "The Executioner",
     "The Hominid",
     "The Follower",
-    "Bear Trap",
     "Baneful Rot",
     "Reprieve",
     "The True Nightmare",
